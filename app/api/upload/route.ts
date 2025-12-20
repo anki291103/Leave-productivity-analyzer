@@ -7,10 +7,8 @@ import {
 
 const prisma = new PrismaClient()
 
-// Allowed Excel cell types
 type ExcelCell = string | number | null
 
-// Row structure coming from Excel
 interface ExcelRow {
   "Employee Name": string
   Date: ExcelCell
@@ -18,7 +16,6 @@ interface ExcelRow {
   "Out-Time"?: ExcelCell
 }
 
-// Convert Excel time (number | string | null) → "HH:MM"
 function excelTimeToString(value: ExcelCell): string | null {
   if (value === null || value === undefined || value === "") return null
 
@@ -63,7 +60,6 @@ export async function POST(req: Request) {
 
       if (!employeeName || !rawDate) continue
 
-      // ---- DATE NORMALIZATION ----
       let date: Date
       if (typeof rawDate === "number") {
         date = new Date(Math.round((rawDate - 25569) * 86400 * 1000))
