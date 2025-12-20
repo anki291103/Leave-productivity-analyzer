@@ -73,8 +73,9 @@ export async function POST(req: Request) {
         })
       }
 
-      const inTime = excelTimeToString(row["In-Time"])
-      const outTime = excelTimeToString(row["Out-Time"])
+ const inTime = excelTimeToString(row["In-Time"]) ?? undefined
+const outTime = excelTimeToString(row["Out-Time"]) ?? undefined
+
 
       const workedHours = calculateWorkedHours(inTime, outTime)
       const leave = isLeaveDay(date, inTime, outTime)
