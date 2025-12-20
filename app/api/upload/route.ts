@@ -7,14 +7,25 @@ import {
 
 const prisma = new PrismaClient()
 
-// ✅ Convert Excel time (number or string) → "HH:MM"
-function excelTimeToString(value: any): string | null {
+// Allowed Excel cell types
+type ExcelCell = string | number | null
+
+// Row structure coming from Excel
+interface ExcelRow {
+  "Employee Name": string
+  Date: ExcelCell
+  "In-Time"?: ExcelCell
+  "Out-Time"?: ExcelCell
+}
+
+// Convert Excel time (number | string | null) → "HH:MM"
+function excelTimeToString(value: ExcelCell): string | null {
   if (value === null || value === undefined || value === "") return null
 
   if (typeof value === "string") return value
 
   if (typeof value === "number") {
-    const totalMinutes = Math.floor(value * 24 * 60 + 0.5)
+    const totalMinutes = Math.round(value * 24 * 60)
     const hours = Math.floor(totalMinutes / 60)
     const minutes = totalMinutes % 60
 
@@ -29,9 +40,9 @@ function excelTimeToString(value: any): string | null {
 export async function POST(req: Request) {
   try {
     const formData = await req.formData()
-    const file = formData.get("file") as File
+    const file = formData.get("file")
 
-    if (!file) {
+    if (!(file instanceof File)) {
       return new Response(
         JSON.stringify({ error: "No file uploaded" }),
         { status: 400 }
@@ -41,15 +52,18 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const workbook = XLSX.read(buffer, { type: "buffer" })
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
-    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null })
+
+    const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet, {
+      defval: null
+    })
 
     for (const row of rows) {
       const employeeName = row["Employee Name"]
-      const rawDate = row["Date"]
+      const rawDate = row.Date
 
       if (!employeeName || !rawDate) continue
 
-      // ✅ Date normalization (all Excel cases)
+      // ---- DATE NORMALIZATION ----
       let date: Date
       if (typeof rawDate === "number") {
         date = new Date(Math.round((rawDate - 25569) * 86400 * 1000))
@@ -73,9 +87,10 @@ export async function POST(req: Request) {
         })
       }
 
- const inTime = excelTimeToString(row["In-Time"]) ?? undefined
-const outTime = excelTimeToString(row["Out-Time"]) ?? undefined
-
+      const inTime =
+        excelTimeToString(row["In-Time"] ?? null) ?? undefined
+      const outTime =
+        excelTimeToString(row["Out-Time"] ?? null) ?? undefined
 
       const workedHours = calculateWorkedHours(inTime, outTime)
       const leave = isLeaveDay(date, inTime, outTime)
@@ -96,8 +111,12 @@ const outTime = excelTimeToString(row["Out-Time"]) ?? undefined
       JSON.stringify({ message: "Excel file processed successfully" }),
       { status: 200 }
     )
-  } catch (err: any) {
-    console.error("UPLOAD ERROR:", err?.message || err)
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Unknown error"
+
+    console.error("UPLOAD ERROR:", message)
+
     return new Response(
       JSON.stringify({ error: "Failed to process file" }),
       { status: 500 }
