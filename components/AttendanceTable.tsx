@@ -1,7 +1,18 @@
+"use client"
+
 import { motion } from "framer-motion"
 
+interface AttendanceRecord {
+  id: string
+  date: string
+  inTime: string | null
+  outTime: string | null
+  workedHours: number
+  isLeave: boolean
+}
+
 type Props = {
-  records: any[]
+  records: AttendanceRecord[]
 }
 
 export default function AttendanceTable({ records }: Props) {
