@@ -6,15 +6,37 @@ import StatsCard from "@/components/StatsCard"
 import AttendanceTable from "@/components/AttendanceTable"
 import LoadingSkeleton from "@/components/LoadingSkeleton"
 
+interface SummaryData {
+  expectedHours: number
+  actualHours: number
+  leavesUsed: number
+  productivity: number
+  daily: AttendanceRecord[]
+}
+
+interface AttendanceRecord {
+  id: string
+  date: string
+  inTime: string | null
+  outTime: string | null
+  workedHours: number
+  isLeave: boolean
+}
+
 export default function Dashboard() {
   const [month, setMonth] = useState("2024-01")
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<SummaryData | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setData(null) // show skeleton on month change
+    setLoading(true)
+
     fetch(`/api/summary?month=${month}`)
       .then(res => res.json())
-      .then(setData)
+      .then(result => {
+        setData(result)
+        setLoading(false)
+      })
   }, [month])
 
   return (
@@ -39,9 +61,9 @@ export default function Dashboard() {
       </div>
 
       {/* CONTENT */}
-      {!data ? (
+      {loading ? (
         <LoadingSkeleton />
-      ) : (
+      ) : data ? (
         <>
           {/* STATS */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
@@ -51,11 +73,13 @@ export default function Dashboard() {
             />
             <StatsCard
               title="Worked Hours"
-  value={data.actualHours.toFixed(2)}
+              value={data.actualHours.toFixed(2)}
             />
             <StatsCard
               title="Leaves Used"
-  value={`${data.leavesUsed} / 2${data.leavesUsed > 2 ? " (Exceeded)" : ""}`}
+              value={`${data.leavesUsed} / 2${
+                data.leavesUsed > 2 ? " (Exceeded)" : ""
+              }`}
             />
             <StatsCard
               title="Productivity"
@@ -68,7 +92,7 @@ export default function Dashboard() {
           {/* TABLE */}
           <AttendanceTable records={data.daily} />
         </>
-      )}
+      ) : null}
     </main>
   )
 }
