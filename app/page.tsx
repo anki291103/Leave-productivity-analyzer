@@ -6,14 +6,6 @@ import StatsCard from "@/components/StatsCard"
 import AttendanceTable from "@/components/AttendanceTable"
 import LoadingSkeleton from "@/components/LoadingSkeleton"
 
-interface SummaryData {
-  expectedHours: number
-  actualHours: number
-  leavesUsed: number
-  productivity: number
-  daily: AttendanceRecord[]
-}
-
 interface AttendanceRecord {
   id: string
   date: string
@@ -23,14 +15,21 @@ interface AttendanceRecord {
   isLeave: boolean
 }
 
+interface SummaryData {
+  expectedHours: number
+  actualHours: number
+  leavesUsed: number
+  productivity: number
+  daily: AttendanceRecord[]
+}
+
 export default function Dashboard() {
   const [month, setMonth] = useState("2024-01")
   const [data, setData] = useState<SummaryData | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // ✅ Only side-effects here (NO setState at top level)
   useEffect(() => {
-    setLoading(true)
-
     fetch(`/api/summary?month=${month}`)
       .then(res => res.json())
       .then(result => {
@@ -38,6 +37,15 @@ export default function Dashboard() {
         setLoading(false)
       })
   }, [month])
+
+  // ✅ Loading is triggered from USER ACTION
+  const handleMonthChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setLoading(true)
+    setData(null)
+    setMonth(e.target.value)
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-900 text-white p-8">
@@ -55,7 +63,7 @@ export default function Dashboard() {
         <input
           type="month"
           value={month}
-          onChange={e => setMonth(e.target.value)}
+          onChange={handleMonthChange}
           className="bg-gray-800 px-4 py-2 rounded-lg text-white"
         />
       </div>
@@ -65,7 +73,6 @@ export default function Dashboard() {
         <LoadingSkeleton />
       ) : data ? (
         <>
-          {/* STATS */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
             <StatsCard
               title="Expected Hours"
@@ -89,7 +96,6 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* TABLE */}
           <AttendanceTable records={data.daily} />
         </>
       ) : null}
