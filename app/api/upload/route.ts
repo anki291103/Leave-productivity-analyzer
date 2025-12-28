@@ -1,3 +1,4 @@
+export const runtime = "nodejs"
 import * as XLSX from "xlsx"
 import { PrismaClient } from "@prisma/client"
 import {
